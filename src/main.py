@@ -3,10 +3,7 @@ import json
 import os
 import xml.etree.ElementTree as ET
 
-import nltk
-from nltk.corpus import wordnet as wn
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
+import spacy
 from rdflib import Graph, Namespace, URIRef, RDF, OWL, BNode, Literal
 from rdflib.collection import Collection
 from rdflib.namespace import RDFS
@@ -43,60 +40,19 @@ class VerbExtractor:
 
     @staticmethod
     def process_words(data):
-        # Ensure that necessary NLTK resources are downloaded
-        nltk.download('wordnet')
-        nltk.download('averaged_perceptron_tagger')
-        nltk.download('punkt')
-
-        # Lemmatizer to get verb forms
-        lemmatizer = WordNetLemmatizer()
-
-        # List of verbs in their gerund form
-        verbs_list = [
-            "Cutting", "Quartering", "Julienning", "Halving", "Dicing", "Slicing", "Snipping", "Slivering", "Sawing", "Paring", "Carving",
-            "Mincing", "Cubing", "Chopping", "Cascading", "Flowing", "Pouring", "Draining", "Spilling", "Splashing", "Sprinkling", "Streaming",
-            "Admixing", "Aggregating", "Amalgamating", "Blending", "Coalescing", "Combining", "Commingleing", "Commixing", "Compounding", 
-            "Concocting", "Conflating", "Fusing", "Grouping", "Integrating", "Intermixing", "Melding", "Merging", "Mingling", "Mixing", 
-            "Pairing", "Shaking", "Unifying",
-            "Arranging", "Balancing", "Changing", "Collecting", "Crumbling", "Disposing", "Finding", "Gathering", "Grounding", "Inserting", 
-            "Introducing", "Ladling", "Laying", "Locating", "Picking", "Piling", "Placing", "Positioning", "Putting", "Reaching", "Setting", 
-            "Sticking", "Throwing"
-        ]
-
-        # Convert between treebank tags and wordnet tags
-        def get_wordnet_pos(treebank_tag):
-            if treebank_tag.startswith('V'):  # if its a Verb
-                return wn.VERB  # return wordnet sign for Verb
-            elif treebank_tag.startswith('N'):  # if its a Noun
-                return wn.NOUN  # return wordnet sign for Noun
-            return None
-
-        # Function to extract verbs
-        def extract_verbs(instruction):
-            tokens = nltk.pos_tag(word_tokenize(instruction))
-            verbs_found = []
-            for token, pos in tokens:
-                wordnet_pos = get_wordnet_pos(pos)
-                # if Verb or Noun lemmatize and check if verb matches with verb_list
-                if wordnet_pos == wn.VERB or wordnet_pos == wn.NOUN:
-                    lemma = lemmatizer.lemmatize(token, wn.VERB)
-                    for verb in verbs_list:
-                        if lemma == lemmatizer.lemmatize(verb.lower(), wn.VERB):
-                            if verb not in verbs_found:
-                                verbs_found.append(verb)
-            return verbs_found
-
-        # Extract verbs from each instruction
+        # Run the following command beforehand:
+        # python -m spacy download en_core_web_trf
+        spacy_model = spacy.load('en_core_web_trf')
         results = []
         for recipe in data['recipes']:
             instructions = recipe['instructions']
             verbs = []
-            sentences = instructions.split('.')
-            for sentence in sentences:
-                extracted = extract_verbs(sentence.lower())
-                verbs.extend(extracted)
+            doc = spacy_model(instructions.lower())
+            for sent in doc.sents:
+                for token in sent:
+                    if token.pos_ == 'VERB':
+                        verbs.append(token.lemma_)
             results.append({'id': recipe['id'], 'verbs': verbs})
-
         return results
 
 

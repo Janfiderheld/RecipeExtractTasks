@@ -1,7 +1,6 @@
 import argparse
 import json
 import os
-import re
 import xml.etree.ElementTree as ET
 
 import nltk
@@ -29,22 +28,17 @@ class VerbExtractor:
     # Extracts the Recipe and the corresponding ID into a JSON Format
     @staticmethod
     def extract_recipes_from_owl(file_path):
-        # Read the OWL file content
-        with open(file_path, 'r') as file:
-            content = file.read()
+        g = Graph()
+        g.parse(file_path)
+        ID = URIRef("http://purl.org/ProductKG/RecipeOn#id")
+        INSTR = URIRef("http://purl.org/ProductKG/RecipeOn#instructions")
 
-        # Extract all Reci:id and Reci:instructions elements
-        ids = re.findall(r'<ns5:id>(.*?)<\/ns5:id>', content)
-        instructions = re.findall(r'<ns5:instructions.*?>(.*?)<\/ns5:instructions>', content, re.DOTALL)
         recipes = []
-
-        # Use zip to pair each id with the corresponding instruction
-        for recipe_id, instruction in zip(ids, instructions):
+        for s, o in g.subject_objects(INSTR):
             recipes.append({
-                "id": recipe_id.strip(),
-                "instructions": instruction.strip()
+                "id": str(g.value(s, ID)),
+                "instructions": str(o)
             })
-        # Return the recipes as a JSON string
         return json.dumps({"recipes": recipes}, indent=4)
 
     @staticmethod
@@ -347,7 +341,7 @@ def main(file_path, remove=False):
         TaskRemover.remove_includes_task(file_path)
 
     # Extract the recipes from the OWL file
-    recipes_json = json.loads(VerbExtractor.extract_recipes_from_owl())
+    recipes_json = json.loads(VerbExtractor.extract_recipes_from_owl(file_path))
 
     # Process the words using the word_prozessor function
     extracted_recipes = VerbExtractor.process_words(recipes_json)

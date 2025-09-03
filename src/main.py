@@ -23,6 +23,10 @@ The main method is used to run the entire process
 DEFAULT_ONTO_PATH = './data/recipe-ingredientset.owl'
 
 class VerbExtractor:
+    # Run the following command beforehand:
+    # python -m spacy download en_core_web_trf
+    spacy_model = spacy.load('en_core_web_trf')
+
     # Extracts the Recipe and the corresponding ID into a JSON Format
     @staticmethod
     def extract_recipes_from_owl(file_path):
@@ -41,20 +45,29 @@ class VerbExtractor:
 
     @staticmethod
     def process_words(data):
-        # Run the following command beforehand:
-        # python -m spacy download en_core_web_trf
-        spacy_model = spacy.load('en_core_web_trf')
         results = []
         for recipe in data['recipes']:
             instructions = recipe['instructions']
             verbs = []
-            doc = spacy_model(instructions.lower())
+            doc = VerbExtractor.spacy_model(instructions.lower())
             for sent in doc.sents:
                 for token in sent:
                     if token.pos_ == 'VERB':
-                        verbs.append(token.lemma_)
+                        verbs.append(VerbExtractor.remove_prefixes(token.lemma_))
             results.append({'id': recipe['id'], 'verbs': verbs})
         return results
+
+    @staticmethod
+    def remove_prefixes(verb: str) -> str:
+        prefixes = ['un', 're', 'in', 'im', 'dis', 'non', 'pre', 'post', 'mis', 'over', 'under', 'sub', 'super', 'anti',
+                    'inter']
+        for prefix in prefixes:
+            if verb.startswith(prefix):
+                candidate = verb[len(prefix):]
+                doc = VerbExtractor.spacy_model(candidate)
+                if any(tok.pos_ == 'VERB' for tok in doc):
+                    return candidate
+        return verb
 
 
 class ResultWriter:

@@ -20,13 +20,14 @@ The add_multiple method adds multiple restrictions as an intersection to the ont
 The main method is used to run the entire process
 """
 
+DEFAULT_ONTO_PATH = './data/recipe-ingredientset.owl'
 
 class VerbExtractor:
     # Extracts the Recipe and the corresponding ID into a JSON Format
     @staticmethod
     def extract_recipes_from_owl(file_path):
         g = Graph()
-        g.parse(file_path)
+        g.parse(file_path, format="xml")
         ID = URIRef("http://purl.org/ProductKG/RecipeOn#id")
         INSTR = URIRef("http://purl.org/ProductKG/RecipeOn#instructions")
 
@@ -314,7 +315,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Bachelorthesis of Kasim Ali Shah, Extract Verbs from an OWL-File"
     )
-    parser.add_argument("file_path", help="The path to the owl-file you want to process")
+    parser.add_argument("--file_path", help="The path to the owl-file you want to process", default=DEFAULT_ONTO_PATH)
     parser.add_argument(
         "-r",
         "--remove",

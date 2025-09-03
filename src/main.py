@@ -1,11 +1,16 @@
-import re, os, json, nltk, argparse
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet as wn
-from rdflib import Graph, Namespace, URIRef, RDF, OWL, BNode, Literal
-from rdflib.namespace import RDFS
-from rdflib.collection import Collection
+import argparse
+import json
+import nltk
+import os
+import re
 import xml.etree.ElementTree as ET
+
+from nltk.corpus import wordnet as wn
+from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import word_tokenize
+from rdflib import Graph, Namespace, URIRef, RDF, OWL, BNode, Literal
+from rdflib.collection import Collection
+from rdflib.namespace import RDFS
 
 """
 Define the main class for the extraction, writing of verbs and removal of verbs from the ontology
@@ -45,7 +50,7 @@ class get_Verbs():
         # Ensure that necessary NLTK resources are downloaded
         nltk.download('wordnet')
         nltk.download('averaged_perceptron_tagger')
-        nltk.download('punkt') 
+        nltk.download('punkt')
 
         # Lemmatizer to get verb forms
         lemmatizer = WordNetLemmatizer()
@@ -64,10 +69,10 @@ class get_Verbs():
 
         # Convert between treebank tags and wordnet tags
         def get_wordnet_pos(treebank_tag):
-            if treebank_tag.startswith('V'): # if its a Verb
-                return wn.VERB # return wordnet sign for Verb
-            elif treebank_tag.startswith('N'): # if its a Noun
-                return wn.NOUN # return wordnet sign for Noun
+            if treebank_tag.startswith('V'):  # if its a Verb
+                return wn.VERB  # return wordnet sign for Verb
+            elif treebank_tag.startswith('N'):  # if its a Noun
+                return wn.NOUN  # return wordnet sign for Noun
             return None
 
         # Function to extract verbs
@@ -77,7 +82,7 @@ class get_Verbs():
             for token, pos in tokens:
                 wordnet_pos = get_wordnet_pos(pos)
                 # if Verb or Noun lemmatize and check if verb matches with verb_list
-                if wordnet_pos == wn.VERB or wordnet_pos == wn.NOUN: 
+                if wordnet_pos == wn.VERB or wordnet_pos == wn.NOUN:
                     lemma = lemmatizer.lemmatize(token, wn.VERB)
                     for verb in verbs_list:
                         if lemma == lemmatizer.lemmatize(verb.lower(), wn.VERB):
@@ -92,11 +97,12 @@ class get_Verbs():
             verbs = []
             sentences = instructions.split('.')
             for sentence in sentences:
-                extracted = extract_verbs((sentence).lower())
+                extracted = extract_verbs(sentence.lower())
                 verbs.extend(extracted)
             results.append({'id': recipe['id'], 'verbs': verbs})
 
         return results
+
 
 class write_Verbs():
     # Define a method to find a class by its Reci:id annotation
@@ -107,11 +113,11 @@ class write_Verbs():
         return None
 
     # Define a method to write the extracted verbs to the ontology
-    def write_to_owl(data,file_path, output_path):
+    def write_to_owl(data, file_path, output_path):
 
         # Load the ontology
         g = Graph()
-        g.parse(file_path , format="xml")
+        g.parse(file_path, format="xml")
 
         # Define the relevant namespaces
         PRODUCTKG = Namespace("http://purl.org/ProductKG/RecipeOn#")
@@ -150,7 +156,7 @@ class write_Verbs():
             "Setting": RECIPE_INSTRUCTIONS["Setting"],
             "Sticking": RECIPE_INSTRUCTIONS["Sticking"],
             "Throwing": RECIPE_INSTRUCTIONS["Throwing"],
-            
+
             # food_mixing tasks
             "Admixing": RECIPE_INSTRUCTIONS["Admixing"],
             "Aggregating": RECIPE_INSTRUCTIONS["Aggregating"],
@@ -174,7 +180,7 @@ class write_Verbs():
             "Pairing": RECIPE_INSTRUCTIONS["Pairing"],
             "Shaking": RECIPE_INSTRUCTIONS["Shaking"],
             "Unifying": RECIPE_INSTRUCTIONS["Unifying"],
-            
+
             # food_cutting tasks
             "Preparing": FOOD_CUTTING["Preparing"],
             "Filletting": FOOD_CUTTING["Filletting"],
@@ -200,7 +206,7 @@ class write_Verbs():
             "Mincing": FOOD_CUTTING["Mincing"],
             "Quartering": FOOD_CUTTING["Quartering"],
             "Trisecting": FOOD_CUTTING["Trisecting"],
-            
+
             # pouring_liquids tasks
             "Draining": POURING_LIQUIDS["Draining"],
             "Cascading": POURING_LIQUIDS["Cascading"],
@@ -218,7 +224,7 @@ class write_Verbs():
             if target_class is None:
                 print(f"Warning: Class with ID {recipe['id']} does not exist. Skipping addition.")
                 continue
-            
+
             for i in range(len(recipe['verbs'])):
                 task_name = recipe['verbs'][i]
                 task_uri = task_uri_map.get(task_name)
@@ -227,27 +233,27 @@ class write_Verbs():
                 if not task_uri:
                     print(f"Warning: Task '{task_name}' not found in task URI map. Skipping.")
                     continue
-                
+
                 # Add the first instruction as a single restriction
                 if i == 0:
                     write_Verbs.add_single(target_class, g, "includes_task", task_uri, SOMA)
 
                 # Add subsequent instructions as an intersection of restrictions
                 else:
-                    previous_task_name = recipe['verbs'][i-1]
+                    previous_task_name = recipe['verbs'][i - 1]
                     previous_task_uri = task_uri_map.get(previous_task_name)
 
                     # Skip tasks that are not in the task URI map (should not happen)
                     if not previous_task_uri:
                         print(f"Warning: Task '{previous_task_name}' not found in task URI map. Skipping.")
                         continue
-                    
+
                     # Add the intersection of the previous and current tasks
                     write_Verbs.add_multiple(target_class, g, [
-                        ("has_prior_task", previous_task_uri), 
+                        ("has_prior_task", previous_task_uri),
                         ("includes_task", task_uri)
                     ], SOMA)
-        
+
         # Write the modified ontology back to a file
         g.serialize(destination=output_path, format="xml")
         print(f"Modified ontology saved to {output_path}.")
@@ -264,7 +270,6 @@ class write_Verbs():
 
         # Add this restriction as an `rdfs:subClassOf` of the target class
         g.add((target_class, RDFS.subClassOf, task_restriction))
-        
 
     # Define a method to add multiple restrictions as an intersection
     def add_multiple(target_class, g, tasks, SOMA):
@@ -295,6 +300,7 @@ class write_Verbs():
         # Add the intersection as a subclass of the target class
         g.add((target_class, RDFS.subClassOf, intersection_node))
 
+
 class subclass_remover():
     def remove_includes_task(file_path):
         # Parse the XML/OWL file
@@ -318,7 +324,8 @@ class subclass_remover():
             for subclass in subclass_elements:
                 # Check if it contains an <owl:onProperty> with "includes_task"
                 on_property = subclass.find("owl:Restriction/owl:onProperty", namespaces)
-                if on_property is not None and "includes_task" in on_property.get(f"{{{namespaces['rdf']}}}resource", ""):
+                if on_property is not None and "includes_task" in on_property.get(f"{{{namespaces['rdf']}}}resource",
+                                                                                  ""):
                     elements_to_remove.append(subclass)
 
             # Remove collected elements from the current <owl:Class>
@@ -328,17 +335,17 @@ class subclass_remover():
         # Write the modified XML back to the file
         tree.write(file_path, encoding="utf-8", xml_declaration=True)
 
-     
+
 def main(file_path, remove=False):
     if remove:
         subclass_remover.remove_includes_task(file_path)
-            
+
     # Extract the recipes from the OWL file
     recipes_json = json.loads(get_Verbs.extract_recipes_from_owl(file_path))
 
     # Process the words using the word_prozessor function
     extracted_recipes = get_Verbs.word_prozessor(recipes_json)
-    
+
     # Define the output path for the modified ontology
     root, extension = os.path.splitext(file_path)
     output_path = root + "_modified" + extension

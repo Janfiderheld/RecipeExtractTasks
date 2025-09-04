@@ -13,6 +13,7 @@ ACTION_LIST = "./data/actions_map.json"
 def write_updated_actions(file_path):
     g = Graph()
     g.parse(file_path, format="xml")
+    # Todo: Update to use MEAL-based namespace
     namespace = Namespace("http://purl.org/ProductKG/recipe-instructions#")
     TASK = URIRef("http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#Task")
     remove_task_subclasses(g, TASK)

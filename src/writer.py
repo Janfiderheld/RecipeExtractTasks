@@ -3,6 +3,7 @@ import json
 from rdflib import Graph, Namespace, URIRef, RDF, OWL, BNode, Literal
 from rdflib.collection import Collection
 from rdflib.namespace import RDFS
+from tqdm import tqdm
 
 from src.extractor import spacy_model, find_class_by_name
 from src.owl_cleaner import remove_task_subclasses
@@ -68,7 +69,7 @@ def write_to_owl(data, file_path, output_path):
     g.bind("instructions", RECIPE_INSTRUCTIONS)
 
     # Add the verbs to the ontology
-    for recipe in data:
+    for recipe in tqdm(data, "Match the verbs and write results to ontology"):
         target_class = find_class_by_id(g, recipe['id'], PRODUCTKG)
         if target_class is None:
             print(f"Warning: Class with ID {recipe['id']} does not exist. Skipping addition.")

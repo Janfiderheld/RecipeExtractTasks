@@ -3,6 +3,7 @@ import json
 import spacy
 from rdflib import Graph, URIRef
 from rdflib.namespace import RDFS
+from tqdm import tqdm
 
 # Run the following command beforehand:
 # python -m spacy download en_core_web_trf
@@ -17,7 +18,7 @@ def extract_recipes_from_owl(file_path):
     INSTR = URIRef("http://purl.org/ProductKG/RecipeOn#instructions")
 
     recipes = []
-    for s, o in g.subject_objects(INSTR):
+    for s, o in tqdm(g.subject_objects(INSTR), "Extract instructions from recipes in ontology"):
         recipes.append({
             "id": str(g.value(s, ID)),
             "instructions": str(o)
@@ -27,7 +28,7 @@ def extract_recipes_from_owl(file_path):
 
 def process_words(data):
     results = []
-    for recipe in data['recipes']:
+    for recipe in tqdm(data['recipes'], "Processing the verbs in the recipes"):
         instructions = recipe['instructions']
         verbs = []
         doc = spacy_model(instructions.lower())

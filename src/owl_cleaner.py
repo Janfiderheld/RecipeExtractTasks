@@ -1,5 +1,6 @@
 from rdflib import Graph, URIRef, RDF, OWL, BNode
 from rdflib.namespace import RDFS
+from tqdm import tqdm
 
 from src.extractor import get_all_subclasses
 
@@ -72,7 +73,7 @@ def remove_includes_task(file_path):
     recipe_iri = URIRef("http://purl.org/ProductKG/RecipeOn#Recipe")
 
     rec_subclasses = get_all_subclasses(g, recipe_iri)
-    for cls in rec_subclasses:
+    for cls in tqdm(rec_subclasses, "Removing the current restrictions from all Recipe subclasses"):
         for pred in [OWL.equivalentClass, RDFS.subClassOf]:
             for node in list(g.objects(cls, pred)):
                 remove_restriction_bnode(g, node)

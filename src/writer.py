@@ -4,7 +4,7 @@ from rdflib import Graph, Namespace, URIRef, RDF, OWL, BNode, Literal
 from rdflib.collection import Collection
 from rdflib.namespace import RDFS
 
-from src.extractor import spacy_model
+from src.extractor import spacy_model, find_class_by_name
 from src.owl_cleaner import remove_task_subclasses
 
 ACTION_LIST = "./data/actions_map.json"
@@ -24,6 +24,8 @@ def write_updated_actions(file_path):
         g.add((key_class, RDFS.subClassOf, TASK))
         for value in values:
             value_participle = to_participle(value)
+            if key.lower() == value_participle.lower():
+                continue
             value_class = namespace[value_participle]
             g.add((value_class, RDFS.subClassOf, key_class))
     g.serialize(file_path, format="xml")
@@ -37,8 +39,6 @@ def to_participle(word: str) -> str:
         participle = lemma[:-2] + "ying"
     elif lemma.endswith("e") and not lemma.endswith("ee"):
         participle = lemma[:-1] + "ing"
-    elif len(lemma) > 2 and lemma[-1] not in "aeiou" and lemma[-2] in "aeiou" and lemma[-3] not in "aeiou":
-        participle = lemma + lemma[-1] + "ing"
     else:
         participle = lemma + "ing"
     return participle.capitalize()
@@ -62,100 +62,9 @@ def write_to_owl(data, file_path, output_path):
     PRODUCTKG = Namespace("http://purl.org/ProductKG/RecipeOn#")
     SOMA = Namespace("http://www.ease-crc.org/ont/SOMA.owl#")
     RECIPE_INSTRUCTIONS = Namespace("http://purl.org/ProductKG/recipe-instructions#")
-    POURING_LIQUIDS = Namespace("http://www.ease-crc.org/ont/pouring_liquids#")
-    FOOD_CUTTING = Namespace("http://www.ease-crc.org/ont/food_cutting#")
-    CUT_SLICE_DICE = Namespace("http://www.ease-crc.org/ont/SOMA.owl#")
     g.bind("recipeon", PRODUCTKG)
     g.bind("soma", SOMA)
     g.bind("instructions", RECIPE_INSTRUCTIONS)
-
-    # Define a mapping of task names to their corresponding URIs
-    task_uri_map = {
-        # food_arranging tasks
-        "Arranging": RECIPE_INSTRUCTIONS["Arranging"],
-        "Balancing": RECIPE_INSTRUCTIONS["Balancing"],
-        "Changing": RECIPE_INSTRUCTIONS["Changing"],
-        "Collecting": RECIPE_INSTRUCTIONS["Collecting"],
-        "Crumbling": RECIPE_INSTRUCTIONS["Crumbling"],
-        "Disposing": RECIPE_INSTRUCTIONS["Disposing"],
-        "Finding": RECIPE_INSTRUCTIONS["Finding"],
-        "Gathering": RECIPE_INSTRUCTIONS["Gathering"],
-        "Grounding": RECIPE_INSTRUCTIONS["Grounding"],
-        "Inserting": RECIPE_INSTRUCTIONS["Inserting"],
-        "Introducing": RECIPE_INSTRUCTIONS["Introducing"],
-        "Ladling": RECIPE_INSTRUCTIONS["Ladling"],
-        "Laying": RECIPE_INSTRUCTIONS["Laying"],
-        "Locating": RECIPE_INSTRUCTIONS["Locating"],
-        "Picking": RECIPE_INSTRUCTIONS["Picking"],
-        "Piling": RECIPE_INSTRUCTIONS["Piling"],
-        "Placing": RECIPE_INSTRUCTIONS["Placing"],
-        "Positioning": RECIPE_INSTRUCTIONS["Positioning"],
-        "Putting": RECIPE_INSTRUCTIONS["Putting"],
-        "Reaching": RECIPE_INSTRUCTIONS["Reaching"],
-        "Setting": RECIPE_INSTRUCTIONS["Setting"],
-        "Sticking": RECIPE_INSTRUCTIONS["Sticking"],
-        "Throwing": RECIPE_INSTRUCTIONS["Throwing"],
-
-        # food_mixing tasks
-        "Admixing": RECIPE_INSTRUCTIONS["Admixing"],
-        "Aggregating": RECIPE_INSTRUCTIONS["Aggregating"],
-        "Amalgamating": RECIPE_INSTRUCTIONS["Amalgamating"],
-        "Blending": RECIPE_INSTRUCTIONS["Blending"],
-        "Coalescing": RECIPE_INSTRUCTIONS["Coalescing"],
-        "Combining": RECIPE_INSTRUCTIONS["Combining"],
-        "Commingleing": RECIPE_INSTRUCTIONS["Commingleing"],
-        "Commixing": RECIPE_INSTRUCTIONS["Commixing"],
-        "Compounding": RECIPE_INSTRUCTIONS["Compounding"],
-        "Concocting": RECIPE_INSTRUCTIONS["Concocting"],
-        "Conflating": RECIPE_INSTRUCTIONS["Conflating"],
-        "Fusing": RECIPE_INSTRUCTIONS["Fusing"],
-        "Grouping": RECIPE_INSTRUCTIONS["Grouping"],
-        "Integrating": RECIPE_INSTRUCTIONS["Integrating"],
-        "Intermixing": RECIPE_INSTRUCTIONS["Intermixing"],
-        "Melding": RECIPE_INSTRUCTIONS["Melding"],
-        "Merging": RECIPE_INSTRUCTIONS["Merging"],
-        "Mingling": RECIPE_INSTRUCTIONS["Mingling"],
-        "Mixing": RECIPE_INSTRUCTIONS["Mixing"],
-        "Pairing": RECIPE_INSTRUCTIONS["Pairing"],
-        "Shaking": RECIPE_INSTRUCTIONS["Shaking"],
-        "Unifying": RECIPE_INSTRUCTIONS["Unifying"],
-
-        # food_cutting tasks
-        "Preparing": FOOD_CUTTING["Preparing"],
-        "Filletting": FOOD_CUTTING["Filletting"],
-        "Crosscutting": FOOD_CUTTING["Crosscutting"],
-        "Jagging": FOOD_CUTTING["Jagging"],
-        "Incising": FOOD_CUTTING["Incising"],
-        "Slashing": FOOD_CUTTING["Slashing"],
-        "Slitting": FOOD_CUTTING["Slitting"],
-        "Cutting": CUT_SLICE_DICE["Cutting"],
-        "Carving": FOOD_CUTTING["Carving"],
-        "Paring": FOOD_CUTTING["Paring"],
-        "Sawing": FOOD_CUTTING["Sawing"],
-        "Severing": FOOD_CUTTING["Severing"],
-        "Trenching": FOOD_CUTTING["Trenching"],
-        "Dicing": CUT_SLICE_DICE["Dicing"],
-        "Chopping": FOOD_CUTTING["Chopping"],
-        "Cubing": FOOD_CUTTING["Cubing"],
-        "Slicing": CUT_SLICE_DICE["Slicing"],
-        "Slivering": FOOD_CUTTING["Slivering"],
-        "Snipping": FOOD_CUTTING["Snipping"],
-        "Halving": FOOD_CUTTING["Halving"],
-        "Julienning": FOOD_CUTTING["Julienning"],
-        "Mincing": FOOD_CUTTING["Mincing"],
-        "Quartering": FOOD_CUTTING["Quartering"],
-        "Trisecting": FOOD_CUTTING["Trisecting"],
-
-        # pouring_liquids tasks
-        "Draining": POURING_LIQUIDS["Draining"],
-        "Cascading": POURING_LIQUIDS["Cascading"],
-        "Flowing": POURING_LIQUIDS["Flowing"],
-        "Pouring": POURING_LIQUIDS["Pouring"],
-        "Spilling": POURING_LIQUIDS["Spilling"],
-        "Splashing": POURING_LIQUIDS["Splashing"],
-        "Sprinkling": POURING_LIQUIDS["Sprinkling"],
-        "Streaming": POURING_LIQUIDS["Streaming"]
-    }
 
     # Add the verbs to the ontology
     for recipe in data:
@@ -166,7 +75,8 @@ def write_to_owl(data, file_path, output_path):
 
         for i in range(len(recipe['verbs'])):
             task_name = recipe['verbs'][i]
-            task_uri = task_uri_map.get(task_name)
+            task_participle = to_participle(task_name)
+            task_uri = find_class_by_name(g, task_participle)
 
             # Skip tasks that are not in the task URI map (should not happen)
             if not task_uri:
@@ -180,7 +90,8 @@ def write_to_owl(data, file_path, output_path):
             # Add subsequent instructions as an intersection of restrictions
             else:
                 previous_task_name = recipe['verbs'][i - 1]
-                previous_task_uri = task_uri_map.get(previous_task_name)
+                previous_task_participle = to_participle(previous_task_name)
+                previous_task_uri = find_class_by_name(g, previous_task_participle)
 
                 # Skip tasks that are not in the task URI map (should not happen)
                 if not previous_task_uri:

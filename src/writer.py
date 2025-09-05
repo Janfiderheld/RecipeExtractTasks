@@ -5,7 +5,7 @@ from rdflib.collection import Collection
 from rdflib.namespace import RDFS
 from tqdm import tqdm
 
-from src.extractor import spacy_model, find_class_by_name
+from src.extractor import spacy_model, create_action_map
 from src.owl_cleaner import remove_task_subclasses
 
 ACTION_LIST = "./data/actions_map.json"
@@ -64,9 +64,12 @@ def write_to_owl(data, file_path, output_path):
     PRODUCTKG = Namespace("http://purl.org/ProductKG/RecipeOn#")
     SOMA = Namespace("http://www.ease-crc.org/ont/SOMA.owl#")
     RECIPE_INSTRUCTIONS = Namespace("http://purl.org/ProductKG/recipe-instructions#")
+    TASK = URIRef("http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#Task")
     g.bind("recipeon", PRODUCTKG)
     g.bind("soma", SOMA)
     g.bind("instructions", RECIPE_INSTRUCTIONS)
+
+    action_map = create_action_map(g, TASK)
 
     # Add the verbs to the ontology
     for recipe in tqdm(data, "Match the verbs and write results to ontology"):
@@ -78,12 +81,12 @@ def write_to_owl(data, file_path, output_path):
         for i in range(len(recipe['verbs'])):
             task_name = recipe['verbs'][i]
             task_participle = to_participle(task_name)
-            task_uri = find_class_by_name(g, task_participle)
 
             # Skip tasks that are not in the task URI map (should not happen)
-            if not task_uri:
+            if task_participle not in action_map:
                 print(f"Warning: Task '{task_name}' not found in task URI map. Skipping.")
                 continue
+            task_uri = action_map[task_participle]
 
             # Add the first instruction as a single restriction
             if i == 0:
@@ -93,12 +96,11 @@ def write_to_owl(data, file_path, output_path):
             else:
                 previous_task_name = recipe['verbs'][i - 1]
                 previous_task_participle = to_participle(previous_task_name)
-                previous_task_uri = find_class_by_name(g, previous_task_participle)
-
                 # Skip tasks that are not in the task URI map (should not happen)
-                if not previous_task_uri:
+                if previous_task_participle not in action_map:
                     print(f"Warning: Task '{previous_task_name}' not found in task URI map. Skipping.")
                     continue
+                previous_task_uri = action_map[previous_task_participle]
 
                 # Add the intersection of the previous and current tasks
                 add_multiple(target_class, g, [

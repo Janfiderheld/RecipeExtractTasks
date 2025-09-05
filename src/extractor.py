@@ -61,11 +61,11 @@ def get_all_subclasses(g, class_uri):
     return list(subclasses)
 
 
-def find_class_by_name(g, word):
-    for cls in g.subjects(None, None):
-        if isinstance(cls, URIRef):
-            # Get local name (after the last # or /)
-            local_name = cls.split('#')[-1].split('/')[-1]
-            if local_name == word:
-                return cls
-    return None
+def create_action_map(g, class_uri):
+    subclasses = get_all_subclasses(g, class_uri)
+    action_map = {}
+    for sc in subclasses:
+        # Get local name (after the last # or /)
+        local_name = sc.split('#')[-1].split('/')[-1]
+        action_map[local_name] = sc
+    return action_map

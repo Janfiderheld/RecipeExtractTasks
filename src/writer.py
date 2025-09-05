@@ -37,7 +37,15 @@ def to_participle(word: str) -> str:
     doc = spacy_model(word)
     lemma = doc[0].lemma_
 
-    if lemma.endswith("ie"):
+    exception_map = {
+        'cut': 'Cutting',
+        'set': 'Setting',
+        'shut': 'Shutting'
+    }
+
+    if lemma in exception_map:
+        return exception_map[lemma]
+    elif lemma.endswith("ie"):
         participle = lemma[:-2] + "ying"
     elif lemma.endswith("e") and not lemma.endswith("ee"):
         participle = lemma[:-1] + "ing"
